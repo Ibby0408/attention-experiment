@@ -1,0 +1,354 @@
+---
+title: "Television Viewing and Short-Term Attention: A Matched-Pair Randomization Experiment in the City of Colmar"
+subtitle: "Statistics 101B"
+author: "Nathan Goldstein, Jonathan Pak, Ibrahim Ahmad, Kalani Caetano, Yitie Ge"
+format:
+  pdf:
+    geometry: margin=1in
+execute:
+  echo: false
+  warning: false
+  message: false
+editor: source
+---
+
+## Abstract
+We investigated whether watching 30 minutes of television, compared to sitting quietly for 30 minutes, affected the immediate attention performance of adult Islanders in the city of Colmar, which sits on the island of Bonne Santé. Using a matched-pair randomized design, where pairs were formed based on baseline attention scores and then each was randomly assigned to one treatment, we enrolled and assigned 122 adult Islanders (61 per treatment), obtained 119 measured primary responses, and included a total of 116 usable responses (58 pairs out of 61) in the registered primary analysis. Participants assigned to TV missed an estimated 1.47 items during the attention test compared to participants assigned to sitting quietly (SD = 9.94, SE = 1.30). A 95% confidence interval was (-1.15, 4.08), and a t-test was run, t(57) = 1.12, p = 0.266 (not significant against preset $\alpha = 0.05$). We did not find statistically significant evidence that viewing TV affected immediate attention. However, because the confidence interval included the prespecified meaningful worsening of four additional missed items, the experiment could not rule out a meaningful worsening of attention.
+
+# 1. Scientific Question and Rationale
+
+**Causal Question:** Among the adult Colmar Islanders enrolled in this experiment, what is the effect of watching television for 30 minutes compared to sitting still for 30 minutes on the number of items missed on an attention test administered immediately afterward?
+
+Passive television watching is a common daily activity; understanding its potential effects on cognitive capabilities is crucial to fitting downtime into a space of time where attention-heavy tasks are not immediately after (driving, studying, work, etc.). The attention test is administered directly after the participant completes their task of either watching TV or an inactive comparison of sitting still; we aim to understand how TV may affect individuals in the short term, immediately after. Standardized attention tests were administered at similar times for all participants, and the ease of administration supports our ability to create worthwhile contrasts from this study. Results from this experiment may help individuals understand how simple habits may affect their cognitive performance and, as a result, allow them to make changes to lifestyle habits to maximize cognitive abilities when they are needed most.
+
+# 2. Methods: Participants, Design, and Protocol
+
+## Participants, Recruiting, and Eligibility
+Participants include all eligible adults in Colmar aged 18 or older, recruited through a random selection process. First, we selected a household by randomly rolling a number from 1 to 2282, the total number of households in Colmar. To account for internal bias or dependence from shared household environments, if multiple eligible adult Islanders were present in the selected household, another number from 1 to the total number of adult residents was rolled to randomly select which one was to participate. From there, the participant would either provide consent to our study and progress to the next stage or decline to participate, in which case we would note the rejection and repeat the random selection process. Recruitment continued until we produced 122 consenting participants who were assigned to treatment, exceeding the registered target of 116 participants by six. It is important to also note that this is not a random sample, and we do not claim that.
+
+## Experimental Unit and Response Unit
+Each individual Islander was the experimental unit, as each individual was randomly assigned to a treatment (TV or Sitting), not a pair. The response unit was the same individual Islander; the post-treatment attention test was administered to each individual.
+
+## Treatment Structure
+One-factor treatment with two levels: watch TV for 30 minutes, and sit still for 30 minutes (control). There was no second factor for a factorial design.
+
+## Allocation Structure
+After all participants were selected, each one completed an attention test. The score was recorded as the number of items missed. These baseline scores were then used to match participants into pairs, accounting for any discrepancies in baseline attention. Participants with similar scores were paired, with one participant in each pair randomly assigned to watch 30 minutes of TV and the other randomly assigned to sit for 30 minutes. Thus, each matched pair contained one participant receiving each treatment. After completing their 30-minute assignments, every participant would then retake the same attention test, with this score counting as their final, post-treatment score. The primary comparison value was the difference in final attention scores between the TV and sitting assignments within each matched pair.
+
+## Dataset
+The dataset was frozen on August 30, with no other treatment condition altered after freezing. If a participant withdrew at any point after being assigned to a pair, that participant and their paired participant would both be excluded from the primary analysis, as there is no longer a difference available to be analyzed.
+
+## Precision and Power
+Our original target sample-size calculation was 226 participants, based on an independent-samples calculation, which was later amended to 116 after recalculating the required sample size for the paired design instead. We ultimately obtained 116 usable observations, forming 58 complete matched pairs. The amended paired-design calculation used a smallest scientifically meaningful difference of four missed items on the attention test, a planning standard deviation of 10.65 missed items for the within-pair differences, a two-sided significance level of 0.05, and 80% power. The calculation required 57.59 pairs, which was rounded up to 58 pairs for a total of 116 participants.
+
+```{r}
+#| label: analysis-setup
+#| include: false
+
+raw_data <- read.csv(
+  "final_data.csv",
+  stringsAsFactors = FALSE,
+  na.strings = c("NA", "N/A", ""),
+  strip.white = TRUE
+)
+
+measured_data <- subset(
+  raw_data,
+  Successfully.Measured == "y" &
+    !is.na(Final.Attention)
+)
+
+find_complete_pairs <- function(data) {
+  pair_pattern <- tapply(
+    data$TV,
+    data$Pair.ID,
+    function(x) paste(sort(x), collapse = ",")
+  )
+
+  complete_ids <- names(
+    pair_pattern[
+      !is.na(pair_pattern) &
+        pair_pattern == "0,1"
+    ]
+  )
+
+  data[data$Pair.ID %in% complete_ids, ]
+}
+
+analysis_data <- find_complete_pairs(measured_data)
+
+analysis_data$Pair.ID <- factor(
+  analysis_data$Pair.ID
+)
+
+analysis_data$TV <- factor(
+  analysis_data$TV,
+  levels = c(0, 1),
+  labels = c("Sitting", "TV")
+)
+
+block_model <- lm(
+  Final.Attention ~ TV + Pair.ID,
+  data = analysis_data
+)
+
+anova_results <- anova(block_model)
+
+standardized_residuals <- rstandard(
+  block_model
+)
+```
+
+
+# 3. Data and Results
+
+## Enrollment and Analytic Sample
+In total, our team approached 158 individuals, with 122 giving consent to participate in the study. These 122 were then randomly assigned to one of two treatment groups (61 to TV and 61 to Sitting), forming 61 matched pairs. We obtained three pairs more than the aimed 58 to serve as extra reserves in case of any withdrawals. Each pair was then administered their treatment, and throughout the process, three individuals withdrew from the study (after assignment but before the post-treatment attention test). As a result, out of 122 participants, we had 119 measured primary responses. Due to no longer having another participant to compare to, all three of these blocks were discarded, and we were left with 58 complete blocks. At the end, we had 116 participants included in the paired analysis (58 from TV and 58 from Sitting) and 58 complete blocks to work with as our analytic sample.
+
+## Protocol deviations and amendments
+Before examining confirmatory outcomes, the target sample size was amended from an original 226 participants to 116 because our original calculation incorrectly used an independent-samples design rather than the paired design. In addition, 71 measured responses were collected on August 30, which was one day after the registered August 29 deadline.
+
+## Descriptive Results and Visualization
+Among the 58 complete pairs, participants assigned to sitting quietly missed a mean of 15.64 items (SD = 13.44, median = 12, range = 0 to 58) while participants assigned to watching TV missed a mean of 17.10 items (SD = 15.42, median = 11, range = 0 to 65). The 58 within-pair TV - Sitting differences had a mean of 1.47 missed items (SD = 9.94, median = 1, range = -25 to 22).
+
+```{r}
+#| label: fig-paired-differences
+#| fig-cap: "Observed TV-minus-sitting differences in final attention scores for the 58 complete matched pairs. Positive values indicate more missed items after watching TV."
+
+library(ggplot2)
+
+dat <- read.csv(
+  "final_data.csv",
+  na.strings = c("N/A", "NA", "")
+)
+
+# Retain participants with measured responses
+measured <- subset(
+  dat,
+  Successfully.Measured == "y" & !is.na(Final.Attention)
+)
+
+# Identify pairs with both responses present
+pair_counts <- table(measured$Pair.ID)
+complete_pair_ids <- names(pair_counts[pair_counts == 2])
+
+analysis_data <- subset(
+  measured,
+  Pair.ID %in% complete_pair_ids
+)
+
+# Put TV and sitting observations from each pair on one row
+pair_data <- reshape(
+  analysis_data[, c("Pair.ID", "TV", "Final.Attention")],
+  idvar = "Pair.ID",
+  timevar = "TV",
+  direction = "wide"
+)
+
+# TV is coded 1; sitting is coded 0
+pair_data$pair_difference <-
+  pair_data$Final.Attention.1 -
+  pair_data$Final.Attention.0
+
+mean_difference <- mean(pair_data$pair_difference)
+confidence_interval <- t.test(pair_data$pair_difference)$conf.int
+
+summary_point <- data.frame(
+  mean = mean_difference,
+  lower = confidence_interval[1],
+  upper = confidence_interval[2]
+)
+
+ggplot() +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed",
+    color = "gray50"
+  ) +
+  geom_jitter(
+    data = pair_data,
+    aes(x = 1, y = pair_difference),
+    width = 0.06,
+    height = 0,
+    size = 2,
+    alpha = 0.7,
+    color = "#3b4cc0"
+  ) +
+  geom_errorbar(
+    data = summary_point,
+    aes(x = 1.25, ymin = lower, ymax = upper),
+    width = 0.04,
+    linewidth = 1
+  ) +
+  geom_point(
+    data = summary_point,
+    aes(x = 1.25, y = mean),
+    size = 3,
+    color = "#c51b7d"
+  ) +
+  scale_x_continuous(
+    breaks = c(1, 1.25),
+    labels = c("Paired differences", "Mean and 95% CI"),
+    limits = c(0.85, 1.4)
+  ) +
+  labs(
+    x = NULL,
+    y = "TV - sitting difference (missed items)",
+    title = "Effect of television within matched pairs"
+  ) +
+  theme_minimal(base_size = 12)
+```
+
+
+## Registered Primary Analysis
+Our registered primary analysis compared the final attention scores within the 58 complete matched pairs. We fitted an additive linear model with treatment and matched pairs as factors. The estimated contrast was defined as TV - Sitting, so a positive value indicates more missed items and worse attention after TV viewing.
+
+```{r}
+#| label: tbl-anova
+#| echo: false
+#| tbl-cap: "Block-adjusted ANOVA results."
+
+anova_display <- data.frame(
+  Source = c(
+    "Treatment",
+    "Matched pair",
+    "Residual"
+  ),
+  Df = anova_results$Df,
+  `Sum Sq` = round(
+    anova_results$`Sum Sq`,
+    2
+  ),
+  `Mean Sq` = round(
+    anova_results$`Mean Sq`,
+    2
+  ),
+  `F value` = c(
+    round(anova_results$`F value`[1], 2),
+    round(anova_results$`F value`[2], 2),
+    NA
+  ),
+  `p-value` = c(
+    round(anova_results$`Pr(>F)`[1], 3),
+    format(
+      anova_results$`Pr(>F)`[2],
+      scientific = TRUE,
+      digits = 3
+    ),
+    ""
+  ),
+  check.names = FALSE
+)
+
+knitr::kable(
+  anova_display,
+  align = c("l", "r", "r", "r", "r", "r")
+)
+```
+
+Participants assigned to the sitting condition missed an average of 15.64 (SD = 13.44), while participants assigned to TV missed an average of 17.10 (SD = 15.42). The mean within-pair difference was 1.47 (SD = 9.94, SE = 1.30), and the 95% confidence interval was (-1.15, 4.08) missed items. The treatment comparison was not statistically significant, t(57)=1.12, p = 0.266. The equivalent block-adjusted ANOVA result was F(1, 57)=1.26, p=0.266.
+
+The data therefore did not provide sufficient evidence that watching TV for 30 minutes changes immediate attention compared with sitting quietly. However, because the confidence interval included the prespecified scientifically meaningful difference of four additional missed items, the results don't rule out a meaningful worsening of attention.
+\newpage
+
+## Model diagnostics
+We then looked at a residual-versus-fitted plot, a normal Q-Q plot, and standardized residuals from the block-adjusted model. The Q-Q plot was mostly linear with a bit of deviation in the tails. The largest absolute standardized residual was 2.69, and there were no observations exceeding an absolute standardized residual of 3. The residual-versus-fitted plot suggests that residual variability could increase somewhat for larger fitted attention scores. Thus, the constant-variance assumption might not perfectly hold.
+
+There were no observations removed using these diagnostics. The approximate normality of the paired differences appeared reasonable. However, the possible nonconstant variance must be considered when we interpret the confidence interval and hypothesis test.
+
+```{r}
+#| label: fig-diagnostics
+#| echo: false
+#| fig-width: 7
+#| fig-height: 6
+#| fig-pos: H
+#| fig-cap: "Residual diagnostics for the block-adjusted model."
+
+old_par <- par(no.readonly = TRUE)
+
+par(
+  mfrow = c(2, 2),
+  mar = c(4, 4, 2.5, 1),
+  oma = c(0, 0, 2, 0),
+  cex = 0.8
+)
+
+plot(
+  block_model,
+  which = 1,
+  main = "Residuals vs Fitted",
+  sub.caption = "",
+  caption = "",
+  pch = 16,
+  col = "#51489a"
+)
+
+plot(
+  block_model,
+  which = 2,
+  main = "Normal Q-Q",
+  sub.caption = "",
+  caption = "",
+  pch = 16,
+  col = "#51489a"
+)
+
+plot(
+  block_model,
+  which = 3,
+  main = "Scale-Location",
+  sub.caption = "",
+  caption = "",
+  pch = 16,
+  col = "#51489a"
+)
+
+plot(
+  seq_along(standardized_residuals),
+  standardized_residuals,
+  main = "Standardized Residuals",
+  xlab = "Observation index",
+  ylab = "Standardized residual",
+  pch = 16,
+  col = "#51489a",
+  ylim = c(-3.5, 3.5)
+)
+
+abline(h = 0, col = "gray")
+abline(
+  h = c(-3, 3),
+  col = "red",
+  lty = 2
+)
+
+mtext(
+  "Residual diagnostics",
+  outer = TRUE,
+  side = 3,
+  line = 0.5,
+  font = 2
+)
+
+par(old_par)
+```
+
+# 4. Conclusion and Discussion
+Among the 116 enrolled participants included in the complete-pair analysis, watching TV for 30 minutes was estimated to produce 1.47 additional missed attention-test items compared to sitting quietly for 30 minutes. This difference was not statistically significant. Thus, the experiment didn’t produce sufficient evidence that watching TV affected immediate attention performance. However, the confidence interval ranged from 1.15 fewer to 4.08 additional missed items and included the prespecified meaningful worsening of 4 missed items. Therefore, our results were inconclusive.
+
+## Limitations
+Data collection occurred at slightly different times of the day, depending on member availability, although participants were generally tested within a few hours of one another. This may result in discrepancies between participant attention scores, due to differences in fatigue or other time-dependent conditions. In addition, the residual diagnostics suggest that variability may have increased among participants with higher fitted attention scores.
+
+## Scope of Conclusions
+Random assignment within matched pairs can only support a causal comparison between the two assigned activities for the participants included in the experiment under the study conditions. The results should not be generalized to every Colmar adult or to the broader Islander population, as the enrolled participants weren’t a probability sample. Additionally, the experiment does not address longer-term TV viewing or effects measured after a delay.
+
+## Member Contributions
+- Title, abstract, scientific question, and rationale: **Jonathan, Ibrahim**
+- Participants, design, allocation or blocking, protocol, and precision or power: **Ibrahim, Nathan**
+- Data audit, deviations, visualization, and descriptive summaries: **Ibrahim, Kalani, Yitie**
+- Registered primary analysis and results: **Jonathan, Yitie**
+- Discussion, limitations, scope of conclusions, and member contributions: **Nathan, Kalani**
+- Member responsible for integrating the final report: **Nathan**
+- Member responsible for checking the data, reported results, and analysis file: **Ibrahim**
+- Member(s) responsible for slide design: **All**
+- Presenter(s): **All**
+- Member responsible for timing check and final package submission: **Jonathan**
